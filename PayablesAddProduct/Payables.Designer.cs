@@ -32,7 +32,7 @@
             this.cboSuppliers = new System.Windows.Forms.ComboBox();
             this.lblProduct = new System.Windows.Forms.Label();
             this.lblSupplier = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
+            this.lblHeader = new System.Windows.Forms.Label();
             this.btnAdd = new System.Windows.Forms.Button();
             this.txtItemNumber = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
@@ -73,14 +73,14 @@
             this.lblSupplier.TabIndex = 3;
             this.lblSupplier.Text = "Supplier";
             // 
-            // label1
+            // lblHeader
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(78, 8);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(67, 13);
-            this.label1.TabIndex = 4;
-            this.label1.Text = "Add Payable";
+            this.lblHeader.AutoSize = true;
+            this.lblHeader.Location = new System.Drawing.Point(78, 8);
+            this.lblHeader.Name = "lblHeader";
+            this.lblHeader.Size = new System.Drawing.Size(67, 13);
+            this.lblHeader.TabIndex = 4;
+            this.lblHeader.Text = "Add Payable";
             // 
             // btnAdd
             // 
@@ -95,7 +95,7 @@
             // txtItemNumber
             // 
             this.txtItemNumber.Enabled = false;
-            this.txtItemNumber.Location = new System.Drawing.Point(81, 32);
+            this.txtItemNumber.Location = new System.Drawing.Point(81, 24);
             this.txtItemNumber.Name = "txtItemNumber";
             this.txtItemNumber.Size = new System.Drawing.Size(350, 20);
             this.txtItemNumber.TabIndex = 6;
@@ -107,7 +107,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.txtItemNumber);
             this.Controls.Add(this.btnAdd);
-            this.Controls.Add(this.label1);
+            this.Controls.Add(this.lblHeader);
             this.Controls.Add(this.lblSupplier);
             this.Controls.Add(this.lblProduct);
             this.Controls.Add(this.cboSuppliers);
@@ -125,7 +125,7 @@
         private System.Windows.Forms.ComboBox cboSuppliers;
         private System.Windows.Forms.Label lblProduct;
         private System.Windows.Forms.Label lblSupplier;
-        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label lblHeader;
         private System.Windows.Forms.Button btnAdd;
         private System.Windows.Forms.TextBox txtItemNumber;
     }

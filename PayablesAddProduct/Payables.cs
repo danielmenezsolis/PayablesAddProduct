@@ -47,6 +47,7 @@ namespace PayablesAddProduct
         public string Categories { get; set; }
         public string ItemDesc { get; set; }
         public double Prices { get; set; }
+        public int IdIncident { get; set; }
 
         public Payables()
         {
@@ -65,11 +66,9 @@ namespace PayablesAddProduct
                 Init();
 
                 SerObject = recordContext.GetWorkspaceRecord("CO$Services") as IGenericObject;
-
-
                 if (SerObject != null)
                 {
-                    int IdIncident = 0;
+                    IdIncident = 0;
                     string itemNumber = "";
                     IList<IGenericField> fields = SerObject.GenericFields;
                     foreach (IGenericField field in fields)
@@ -83,17 +82,33 @@ namespace PayablesAddProduct
                             itemNumber = field.DataValue.Value.ToString();
                         }
                     }
-                    SRType = GetSRType(IdIncident);
+                    SRType = GetSRType();
                     AirtportText = GetAirport(SerObject.Id);
                     if (SRType == "CATERING")
                     {
-                        txtItemNumber.Visible = false;
-                        CboProductos.Visible = true;
-
-                        if (!String.IsNullOrEmpty(AirtportText))
+                        getSuppliers();
+                        PayableService = recordContext.GetWorkspaceRecord("CO$Payables") as IGenericObject;
+                        IList<IGenericField> fieldsk = PayableService.GenericFields;
+                        foreach (IGenericField genField in fieldsk)
                         {
-                            GetPData(AirtportText, "");
+                            if (genField.Name == "ExchangeRate")
+                            {
+                                genField.DataValue.Value = getExchangeRate(GetDeliveryDate()).ToString();
+                            }
+                            txtItemNumber.Visible = false;
+                            CboProductos.Visible = false;
+                            lblProduct.Visible = false;
+                            lblHeader.Text = "Add Supplier: ";
                         }
+                        /*
+                                               txtItemNumber.Visible = false;
+                                               CboProductos.Visible = true;
+
+                                               if (!String.IsNullOrEmpty(AirtportText))
+                                               {
+                                                   GetPData(AirtportText, "");
+                                               }
+                                               */
 
                     }
                     else
@@ -113,9 +128,24 @@ namespace PayablesAddProduct
         }
         private void btnAdd_Click(object sender, EventArgs e)
         {
-            GetPData(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
-            Prices = GetPrices(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
-            LlenarValoresServicio();
+            if (SRType == "CATERING")
+            {
+                PayableService = recordContext.GetWorkspaceRecord("CO$Payables") as IGenericObject;
+                IList<IGenericField> fields = PayableService.GenericFields;
+                foreach (IGenericField genField in fields)
+                {
+                    if (genField.Name == "Supplier")
+                    {
+                        genField.DataValue.Value = cboSuppliers.Text;
+                    }
+                }
+            }
+            else
+            {
+                GetPData(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
+                Prices = GetPrices(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
+                LlenarValoresServicio();
+            }
         }
 
         public bool Init()
@@ -172,17 +202,17 @@ namespace PayablesAddProduct
             }
             return air;
         }
-        public string GetSRType(int incidentId)
+        public string GetSRType()
         {
             try
             {
                 string SRTYPE = "";
-                if (incidentId != 0)
+                if (IdIncident != 0)
                 {
                     ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
                     APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
                     clientInfoHeader.AppID = "Query Example";
-                    String queryString = "SELECT I.Customfields.c.sr_type.LookupName FROM Incident I WHERE id=" + incidentId + "";
+                    String queryString = "SELECT I.Customfields.c.sr_type.LookupName FROM Incident I WHERE id=" + IdIncident;
                     client.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
                     foreach (CSVTable table in queryCSV.CSVTables)
                     {
@@ -225,6 +255,39 @@ namespace PayablesAddProduct
                 return "";
             }
         }
+        public DateTime GetDeliveryDate()
+        {
+            try
+            {
+                DateTime DDate = DateTime.Now;
+                if (IdIncident != 0)
+                {
+                    ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+                    APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+                    clientInfoHeader.AppID = "Query Example";
+                    String queryString = "SELECT Customfields.C.delivery_datetime As DDate FROM Incident WHERE ID =" + IdIncident;
+                    client.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                    foreach (CSVTable table in queryCSV.CSVTables)
+                    {
+                        String[] rowData = table.Rows;
+                        foreach (String data in rowData)
+                        {
+                            DDate = DateTime.Parse(data);
+                        }
+                    }
+                }
+
+                return DDate;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("GetType: " + ex.Message + "Detail: " + ex.StackTrace);
+                return DateTime.Now;
+            }
+        }
+
+
+
         public void GetPData(string AirportText, string ItemN)
         {
             try
@@ -706,7 +769,7 @@ namespace PayablesAddProduct
                                         {
                                             foreach (G_1_ITEMSUP item in lista.G_1_ITEMSUP)
                                             {
-                                                if (item.ITEM_NUMBER == (SRType == "CATERING" ? cboSuppliers.Text.Trim() : txtItemNumber.Text))
+                                                if (item.ITEM_NUMBER == (SRType == "CATERING" ? "CATEIOT0081" : txtItemNumber.Text))
                                                 {
                                                     Sup sup = new Sup();
                                                     sup.Id = item.VENDOR_ID;
@@ -715,6 +778,7 @@ namespace PayablesAddProduct
                                                 }
 
                                             }
+
                                         }
                                     }
                                 }
@@ -792,6 +856,108 @@ namespace PayablesAddProduct
         {
 
         }
+        private double getExchangeRate(DateTime date)
+        {
+            try
+            {
+                double rate = 1;
+                string envelope = "<soap:Envelope " +
+                "	xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\"" +
+     "	xmlns:pub=\"http://xmlns.oracle.com/oxp/service/PublicReportService\">" +
+       "<soap:Header/>" +
+     "	<soap:Body>" +
+     "		<pub:runReport>" +
+     "			<pub:reportRequest>" +
+     "			<pub:attributeFormat>xml</pub:attributeFormat>" +
+     "				<pub:attributeLocale>en</pub:attributeLocale>" +
+     "				<pub:attributeTemplate>default</pub:attributeTemplate>" +
+
+                 "<pub:parameterNameValues>" +
+                      "<pub:item>" +
+                   "<pub:name>P_EXCHANGE_DATE</pub:name>" +
+                   "<pub:values>" +
+                      "<pub:item>" + date.ToString("yyyy-MM-dd") + "</pub:item>" +
+                   "</pub:values>" +
+                "</pub:item>" +
+                 "</pub:parameterNameValues>" +
+
+     "				<pub:reportAbsolutePath>Custom/Integracion/XX_DAILY_RATES_REP.xdo</pub:reportAbsolutePath>" +
+     "				<pub:sizeOfDataChunkDownload>-1</pub:sizeOfDataChunkDownload>" +
+     "			</pub:reportRequest>" +
+     "		</pub:runReport>" +
+     "	</soap:Body>" +
+     "</soap:Envelope>";
+                globalContext.LogMessage("Payables Get Exchange Date Rate:" + envelope);
+                byte[] byteArray = Encoding.UTF8.GetBytes(envelope);
+                // Construct the base 64 encoded string used as credentials for the service call
+                byte[] toEncodeAsBytes = ASCIIEncoding.ASCII.GetBytes("itotal" + ":" + "Oracle123");
+                string credentials = Convert.ToBase64String(toEncodeAsBytes);
+                // Create HttpWebRequest connection to the service
+                HttpWebRequest request =
+                 (HttpWebRequest)WebRequest.Create("https://egqy-test.fa.us6.oraclecloud.com:443/xmlpserver/services/ExternalReportWSSService");
+                // Configure the request content type to be xml, HTTP method to be POST, and set the content length
+                request.Method = "POST";
+
+                request.ContentType = "application/soap+xml; charset=UTF-8;action=\"\"";
+                request.ContentLength = byteArray.Length;
+                // Configure the request to use basic authentication, with base64 encoded user name and password, to invoke the service.
+                request.Headers.Add("Authorization", "Basic " + credentials);
+                // Set the SOAP action to be invoked; while the call works without this, the value is expected to be set based as per standards
+                //request.Headers.Add("SOAPAction", "http://xmlns.oracle.com/apps/cdm/foundation/parties/organizationService/applicationModule/findOrganizationProfile");
+                // Write the xml payload to the request
+                Stream dataStream = request.GetRequestStream();
+                dataStream.Write(byteArray, 0, byteArray.Length);
+                dataStream.Close();
+                // Write the xml payload to the request
+                XDocument doc;
+                XmlDocument docu = new XmlDocument();
+                string result;
+                using (WebResponse response = request.GetResponse())
+                {
+                    using (Stream stream = response.GetResponseStream())
+                    {
+                        doc = XDocument.Load(stream);
+                        result = doc.ToString();
+                        XmlDocument xmlDoc = new XmlDocument();
+                        xmlDoc.LoadXml(result);
+                        XmlNamespaceManager nms = new XmlNamespaceManager(xmlDoc.NameTable);
+                        nms.AddNamespace("env", "http://schemas.xmlsoap.org/soap/envelope/");
+                        nms.AddNamespace("ns2", "http://xmlns.oracle.com/oxp/service/PublicReportService");
+
+                        XmlNode desiredNode = xmlDoc.SelectSingleNode("//ns2:runReportReturn", nms);
+                        if (desiredNode.HasChildNodes)
+                        {
+                            for (int i = 0; i < desiredNode.ChildNodes.Count; i++)
+                            {
+                                if (desiredNode.ChildNodes[i].LocalName == "reportBytes")
+                                {
+                                    byte[] data = Convert.FromBase64String(desiredNode.ChildNodes[i].InnerText);
+                                    string decodedString = Encoding.UTF8.GetString(data);
+                                    XmlTextReader reader = new XmlTextReader(new System.IO.StringReader(decodedString));
+                                    reader.Read();
+                                    XmlSerializer serializer = new XmlSerializer(typeof(DATA_DS_RATES));
+                                    DATA_DS_RATES res = (DATA_DS_RATES)serializer.Deserialize(reader);
+                                    if (res.G_N_RATES != null)
+                                    {
+                                        rate = Convert.ToDouble(res.G_N_RATES.G_1_RATES.CONVERSION_RATE);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return rate;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.StackTrace);
+                return 1;
+            }
+        }
+
+
+
     }
     public class ComponentChild
     {
@@ -869,6 +1035,34 @@ namespace PayablesAddProduct
     {
         [XmlElement(ElementName = "G_N_ITEMSUP")]
         public List<G_N_ITEMSUP> G_N_ITEMSUP { get; set; }
+    }
+
+    //RATES
+    [XmlRoot(ElementName = "G_1_RATES")]
+    public class G_1_RATES
+    {
+        [XmlElement(ElementName = "CONVERSION_RATE")]
+        public string CONVERSION_RATE { get; set; }
+        [XmlElement(ElementName = "CONVERSION_DATE")]
+        public string CONVERSION_DATE { get; set; }
+    }
+
+    [XmlRoot(ElementName = "G_N_RATES")]
+    public class G_N_RATES
+    {
+        [XmlElement(ElementName = "USER_CONVERSION_TYPE")]
+        public string USER_CONVERSION_TYPE { get; set; }
+        [XmlElement(ElementName = "G_1_RATES")]
+        public G_1_RATES G_1_RATES { get; set; }
+    }
+
+    [XmlRoot(ElementName = "DATA_DS_RATES")]
+    public class DATA_DS_RATES
+    {
+        [XmlElement(ElementName = "P_EXCHANGE_DATE")]
+        public string P_EXCHANGE_DATE { get; set; }
+        [XmlElement(ElementName = "G_N_RATES")]
+        public G_N_RATES G_N_RATES { get; set; }
     }
 
 
