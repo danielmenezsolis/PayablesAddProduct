@@ -82,8 +82,6 @@ namespace PayablesAddProduct
                 {
                     string OUM = "";
                     string Quantity = "1";
-                    string UnitCost = "0";
-                    double Ticket = 0;
                     string services = "0";
                     //Incident = (IIncident)_recordContext.GetWorkspaceRecord(WorkspaceRecordType.Incident);
                     //IncidentID = Incident.ID;
@@ -102,29 +100,81 @@ namespace PayablesAddProduct
                             services = gen.DataValue.Value.ToString();
                         }
                     }
-                  
+
                     IncidentID = GetIncidentId(services);
-                    switch (OUM)
+                    if (OUM == "2")
                     {
-                        //TW
-                        case "2":
-                            string ICAOId = getICAODesi(IncidentID);
-                            Quantity = GetMTOW(ICAOId);
-                            break;
-                        //HR
-                        case "3":
-
-                            break;
-                        //HHR
-                        case "4":
-
-                            break;
-                        //MIN
-                        case "5":
-
-                            break;
-
+                        string ICAOId = getICAODesi(IncidentID);
+                        Quantity = GetMTOW(ICAOId);
                     }
+                    if (OUM == "3" || OUM == "4" || OUM == "5")
+                    {
+                        double minover = 0;
+                        double antelacion = 0;
+                        double extension = 0;
+                        string itinerary = getItinerary(services);
+
+                        if (!AirportOpen24(itinerary))
+                        {
+
+                            int arrival = getArrivalAirport(itinerary);
+                            if (arrival != 0)
+                            {
+                                DateTime openDate;
+                                DateTime closeDate;
+                                string open = getOpenArrivalAirport(arrival);
+                                string close = getCloseArrivalAirport(arrival);
+                                DateTime ATA = getATAItinerary(Convert.ToInt32(itinerary));
+                                DateTime ATD = getATDItinerary(Convert.ToInt32(itinerary));
+                                openDate = DateTime.Parse(ATA.Date.ToShortDateString() + " " + open);
+                                closeDate = DateTime.Parse(ATA.Date.ToShortDateString() + " " + close);
+                                if (IsBetween(ATA, openDate, closeDate))
+                                {
+                                    antelacion = (ATA - openDate).TotalMinutes;
+                                }
+                                extension = ((ATD - openDate).TotalMinutes) + 15;
+                                if (ATA.Date != ATD.Date)
+                                {
+                                    openDate = DateTime.Parse(ATD.Date.ToShortDateString() + " " + open);
+                                    closeDate = DateTime.Parse(ATD.Date.ToShortDateString() + " " + close);
+                                    if (IsBetween(ATD, openDate, closeDate))
+                                    {
+                                        extension = ((ATD - openDate).TotalMinutes) + 15;
+                                    }
+                                    else
+                                    {
+                                        extension = 0;
+                                    }
+                                }
+                                if (extension > 0)
+                                {
+                                    minover = extension < 0 ? 0 : extension;
+                                }
+                                if (ATA.Date != ATD.Date)
+                                {
+                                    minover = (antelacion < 0 ? 0 : antelacion) + (extension < 0 ? 0 : extension);
+                                }
+                            }
+
+                            TimeSpan t = TimeSpan.FromMinutes(minover);
+                            //HR//
+                            if (OUM == "3")
+                            {
+                                Quantity = (Math.Ceiling(t.TotalHours)).ToString();
+                            }
+                            //HHR//
+                            if (OUM == "4")
+                            {
+                                Quantity = Math.Ceiling((t.TotalMinutes / 60) * 2).ToString();
+                            }
+                            //MIN/
+                            if (OUM == "5")
+                            {
+                                Quantity = Math.Ceiling(t.TotalMinutes).ToString();
+                            }
+                        }
+                    }
+
                     foreach (IGenericField gen in genericFields)
                     {
                         if (gen.Name == "Quantity")
@@ -139,6 +189,131 @@ namespace PayablesAddProduct
             catch (Exception e)
             {
                 gcontext.LogMessage(e.Message + "Det" + e.StackTrace);
+            }
+        }
+
+        public static bool IsBetween(DateTime input, DateTime date1, DateTime date2)
+        {
+            return (input > date1 && input < date2);
+        }
+        public DateTime getATDItinerary(int Itinerarie)
+        {
+            try
+            {
+                string ATD = "";
+                ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+                APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+                clientInfoHeader.AppID = "Query Example";
+                String queryString = "SELECT ATD,ATDTime FROM Co.Itinerary WHERE ID = " + Itinerarie;
+                clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                foreach (CSVTable table in queryCSV.CSVTables)
+                {
+                    String[] rowData = table.Rows;
+                    foreach (String data in rowData)
+                    {
+                        Char delimiter = '|';
+                        string[] substrings = data.Split(delimiter);
+                        ATD = substrings[0] + " " + substrings[1];
+                    }
+                }
+
+                return DateTime.Parse(ATD);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("getATAItinerary: " + ex.Message + "Detail: " + ex.StackTrace);
+                return DateTime.Now;
+            }
+        }
+        public DateTime getATAItinerary(int Itinerarie)
+        {
+            try
+            {
+                string ATA = "";
+                ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+                APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+                clientInfoHeader.AppID = "Query Example";
+                String queryString = "SELECT ATA,ATATime FROM Co.Itinerary WHERE ID = " + Itinerarie;
+                clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                foreach (CSVTable table in queryCSV.CSVTables)
+                {
+                    String[] rowData = table.Rows;
+                    foreach (String data in rowData)
+                    {
+                        Char delimiter = '|';
+                        string[] substrings = data.Split(delimiter);
+                        ATA = substrings[0] + " " + substrings[1];
+                    }
+                }
+                return DateTime.Parse(ATA);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("getATAItinerary: " + ex.Message + "Detail: " + ex.StackTrace);
+                return DateTime.Now;
+            }
+        }
+        public string getCloseArrivalAirport(int Arrival)
+        {
+            string closes = "";
+            ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+            APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+            clientInfoHeader.AppID = "Query Example";
+            String queryString = "SELECT ClosesZuluTime  FROM Co.Airport_WorkingHours  WHERE Airports =" + Arrival + " AND Type = 1";
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            foreach (CSVTable table in queryCSV.CSVTables)
+            {
+                String[] rowData = table.Rows;
+                foreach (String data in rowData)
+                {
+                    closes = data;
+                }
+            }
+            return closes;
+        }
+        public string getOpenArrivalAirport(int Arrival)
+        {
+            string opens = "";
+            ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+            APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+            clientInfoHeader.AppID = "Query Example";
+            String queryString = "SELECT OpensZuluTime FROM Co.Airport_WorkingHours  WHERE Airports =" + Arrival + " AND Type = 1";
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            foreach (CSVTable table in queryCSV.CSVTables)
+            {
+                String[] rowData = table.Rows;
+                foreach (String data in rowData)
+                {
+                    opens = data;
+                }
+            }
+            return opens;
+        }
+        public bool AirportOpen24(string Itinerarie)
+        {
+            try
+            {
+                bool open = true;
+                ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+                APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+                clientInfoHeader.AppID = "Query Example";
+                String queryString = "SELECT ArrivalAirport.HoursOpen24 FROM Co.Itinerary  WHERE ID =" + Itinerarie;
+                clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                foreach (CSVTable table in queryCSV.CSVTables)
+                {
+                    String[] rowData = table.Rows;
+                    foreach (String data in rowData)
+                    {
+                        open = data == "1" ? true : false;
+                    }
+                }
+
+                return open;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("AirportOpen24: " + ex.Message + "Detail: " + ex.StackTrace);
+                return false;
             }
         }
         public bool Init()
@@ -213,6 +388,24 @@ namespace PayablesAddProduct
             }
             return Icao;
         }
+        public string getItinerary(string service)
+        {
+            string itinerary = "";
+            ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+            APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+            clientInfoHeader.AppID = "Query Example";
+            String queryString = "SELECT Itinerary FROM CO.Services WHERE ID =" + service;
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            foreach (CSVTable table in queryCSV.CSVTables)
+            {
+                String[] rowData = table.Rows;
+                foreach (String data in rowData)
+                {
+                    itinerary = data;
+                }
+            }
+            return itinerary;
+        }
         public int GetIncidentId(string Service)
         {
             int i = 0;
@@ -231,7 +424,24 @@ namespace PayablesAddProduct
             }
             return i;
         }
-
+        public int getArrivalAirport(string Itinerarie)
+        {
+            int arriv = 0;
+            ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+            APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+            clientInfoHeader.AppID = "Query Example";
+            String queryString = "SELECT ArrivalAirport FROM Co.Itinerary  WHERE ID =" + Itinerarie;
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            foreach (CSVTable table in queryCSV.CSVTables)
+            {
+                String[] rowData = table.Rows;
+                foreach (String data in rowData)
+                {
+                    arriv = String.IsNullOrEmpty(data) ? 0 : Convert.ToInt32(data);
+                }
+            }
+            return arriv;
+        }
 
         public string RuleConditionInvoked(string conditionName)
         {
