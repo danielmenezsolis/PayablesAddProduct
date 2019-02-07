@@ -101,15 +101,14 @@ namespace PayablesAddProduct
                             lblHeader.Text = "Add Supplier: ";
                         }
                         /*
-                                               txtItemNumber.Visible = false;
-                                               CboProductos.Visible = true;
+                       txtItemNumber.Visible = false;
+                       CboProductos.Visible = true;
 
-                                               if (!String.IsNullOrEmpty(AirtportText))
-                                               {
-                                                   GetPData(AirtportText, "");
-                                               }
-                                               */
-
+                       if (!String.IsNullOrEmpty(AirtportText))
+                       {
+                           GetPData(AirtportText, "");
+                       }
+                       */
                     }
                     else
                     {
