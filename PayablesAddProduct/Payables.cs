@@ -48,6 +48,7 @@ namespace PayablesAddProduct
         public string ItemDesc { get; set; }
         public double Prices { get; set; }
         public int IdIncident { get; set; }
+        public string Quantity { get; set; }
 
         public Payables()
         {
@@ -64,7 +65,7 @@ namespace PayablesAddProduct
             try
             {
                 Init();
-
+                Quantity = "1";
                 SerObject = recordContext.GetWorkspaceRecord("CO$Services") as IGenericObject;
                 if (SerObject != null)
                 {
@@ -679,6 +680,14 @@ namespace PayablesAddProduct
                     {
                         genField.DataValue.Value = Prices;
                     }
+                    if (genField.Name == "UnitCost")
+                    {
+                        genField.DataValue.Value = Prices;
+                    }
+                    if (genField.Name == "Quantity")
+                    {
+                        genField.DataValue.Value = "1";
+                    }
                 }
             }
             catch (Exception ex)
@@ -706,10 +715,25 @@ namespace PayablesAddProduct
     "				<pub:attributeTemplate></pub:attributeTemplate>" +
     "				<pub:reportAbsolutePath>Custom/Integracion/XX_ITEM_SUPPLIER_ORG_REP.xdo</pub:reportAbsolutePath>" +
     "				<pub:sizeOfDataChunkDownload>-1</pub:sizeOfDataChunkDownload>" +
-    "			</pub:reportRequest>" +
-    "		</pub:runReport>" +
-    "	</soap:Body>" +
+              " <pub:parameterNameValues>" +
+                                "<pub:item>" +
+                                    "<pub:name>pAereo</pub:name> " +
+                                    "<pub:values> " +
+                                        "<pub:item>IO_AEREO_" + AirtportText + "</pub:item> " +
+                                    "</pub:values> " +
+                                "</pub:item> " +
+                                "<pub:item> " +
+                                   "<pub:name>pItem</pub:name>" +
+                                    "<pub:values>" +
+                                        "<pub:item>" + (SRType == "CATERING" ? "CATEIOT0081" : txtItemNumber.Text) + "</pub:item>" +
+                                    "</pub:values>" +
+                                "</pub:item>" +
+                            "</pub:parameterNameValues>" +
+                "</pub:reportRequest>" +
+                "</pub:runReport>" +
+                "</soap:Body>" +
     "</soap:Envelope>";
+                globalContext.LogMessage(envelope);
                 byte[] byteArray = Encoding.UTF8.GetBytes(envelope);
                 // Construct the base 64 encoded string used as credentials for the service call
                 byte[] toEncodeAsBytes = ASCIIEncoding.ASCII.GetBytes("itotal" + ":" + "Oracle123");
