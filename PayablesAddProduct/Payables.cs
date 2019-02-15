@@ -128,23 +128,30 @@ namespace PayablesAddProduct
         }
         private void btnAdd_Click(object sender, EventArgs e)
         {
-            if (SRType == "CATERING")
+            try
             {
-                PayableService = recordContext.GetWorkspaceRecord("CO$Payables") as IGenericObject;
-                IList<IGenericField> fields = PayableService.GenericFields;
-                foreach (IGenericField genField in fields)
+                if (SRType == "CATERING")
                 {
-                    if (genField.Name == "Supplier")
+                    PayableService = recordContext.GetWorkspaceRecord("CO$Payables") as IGenericObject;
+                    IList<IGenericField> fields = PayableService.GenericFields;
+                    foreach (IGenericField genField in fields)
                     {
-                        genField.DataValue.Value = cboSuppliers.Text;
+                        if (genField.Name == "Supplier")
+                        {
+                            genField.DataValue.Value = cboSuppliers.Text;
+                        }
                     }
                 }
+                else
+                {
+                    GetPData(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
+                    Prices = GetPrices(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
+                    LlenarValoresServicio();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                GetPData(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
-                Prices = GetPrices(AirtportText, (SRType == "CATERING" ? CboProductos.SelectedValue.ToString() : txtItemNumber.Text));
-                LlenarValoresServicio();
+                MessageBox.Show("AddClick: " + ex.Message + "Det: " + ex.StackTrace);
             }
         }
 
@@ -499,7 +506,6 @@ namespace PayablesAddProduct
             catch (Exception ex)
             {
                 MessageBox.Show("GetPData" + ex.Message + "DEtalle: " + ex.StackTrace);
-
             }
         }
         public string GetCategories(string ItemN, string Airport)
@@ -692,7 +698,7 @@ namespace PayablesAddProduct
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + "Det" + ex.StackTrace);
+                MessageBox.Show("LlenarValores: " + ex.Message + "Det: " + ex.StackTrace);
             }
 
         }

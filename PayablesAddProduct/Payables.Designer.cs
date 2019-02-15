@@ -95,7 +95,7 @@
             // txtItemNumber
             // 
             this.txtItemNumber.Enabled = false;
-            this.txtItemNumber.Location = new System.Drawing.Point(81, 24);
+            this.txtItemNumber.Location = new System.Drawing.Point(81, 32);
             this.txtItemNumber.Name = "txtItemNumber";
             this.txtItemNumber.Size = new System.Drawing.Size(350, 20);
             this.txtItemNumber.TabIndex = 6;
