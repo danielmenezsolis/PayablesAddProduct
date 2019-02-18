@@ -31,10 +31,11 @@ namespace PayablesAddProduct
         public IGenericObject PayableService;
 
 
+        public string CPQPass { get; set; }
         public string SRType { get; set; }
         public string AirtportText { get; set; }
         public int IdService { get; set; }
-        RightNowSyncPortClient client;
+        RightNowSyncPortClient clientORN { get; set; }
         public string ItemClaveSat { get; set; }
         public string ParticipacionCobro { get; set; }
         public string CuentaGasto { get; set; }
@@ -65,6 +66,7 @@ namespace PayablesAddProduct
             try
             {
                 Init();
+                CPQPass = getPassword("CPQ");
                 Quantity = "1";
                 SerObject = recordContext.GetWorkspaceRecord("CO$Services") as IGenericObject;
                 if (SerObject != null)
@@ -122,7 +124,7 @@ namespace PayablesAddProduct
             }
             catch (Exception ex)
             {
-                globalContext.LogMessage(ex.Message);
+                globalContext.LogMessage("Load: " + ex.Message + "Det: " + ex.StackTrace);
 
             }
         }
@@ -168,14 +170,14 @@ namespace PayablesAddProduct
                 binding.MaxReceivedMessageSize = 1048576; //1MB
                 binding.SendTimeout = new TimeSpan(0, 10, 0);
                 // Create client proxy class
-                client = new RightNowSyncPortClient(binding, endPointAddr);
+                clientORN = new RightNowSyncPortClient(binding, endPointAddr);
                 // Ask the client to not send the timestamp
-                BindingElementCollection elements = client.Endpoint.Binding.CreateBindingElements();
+                BindingElementCollection elements = clientORN.Endpoint.Binding.CreateBindingElements();
                 elements.Find<SecurityBindingElement>().IncludeTimestamp = false;
-                client.Endpoint.Binding = new CustomBinding(elements);
+                clientORN.Endpoint.Binding = new CustomBinding(elements);
                 // Ask the Add-In framework the handle the session logic
-                globalContext.PrepareConnectSession(client.ChannelFactory);
-                if (client != null)
+                globalContext.PrepareConnectSession(clientORN.ChannelFactory);
+                if (clientORN != null)
                 {
                     result = true;
                 }
@@ -196,7 +198,7 @@ namespace PayablesAddProduct
             APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
             clientInfoHeader.AppID = "Query Example";
             String queryString = "SELECT Airport FROM CO.Services WHERE ID =" + Service + "";
-            client.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 10000, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 10000, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
             foreach (CSVTable table in queryCSV.CSVTables)
             {
                 String[] rowData = table.Rows;
@@ -220,7 +222,7 @@ namespace PayablesAddProduct
                     APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
                     clientInfoHeader.AppID = "Query Example";
                     String queryString = "SELECT I.Customfields.c.sr_type.LookupName FROM Incident I WHERE id=" + IdIncident;
-                    client.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                    clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
                     foreach (CSVTable table in queryCSV.CSVTables)
                     {
                         String[] rowData = table.Rows;
@@ -273,7 +275,7 @@ namespace PayablesAddProduct
                     APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
                     clientInfoHeader.AppID = "Query Example";
                     String queryString = "SELECT Customfields.C.delivery_datetime As DDate FROM Incident WHERE ID =" + IdIncident;
-                    client.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+                    clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
                     foreach (CSVTable table in queryCSV.CSVTables)
                     {
                         String[] rowData = table.Rows;
@@ -846,6 +848,27 @@ namespace PayablesAddProduct
             GetPData(AirtportText, txtItemNumber.Text);
             getSuppliers();
         }
+
+        public string getPassword(string application)
+        {
+            string password = "";
+            ClientInfoHeader clientInfoHeader = new ClientInfoHeader();
+            APIAccessRequestHeader aPIAccessRequest = new APIAccessRequestHeader();
+            clientInfoHeader.AppID = "Query Example";
+            String queryString = "SELECT Password FROM CO.Password WHERE Aplicacion='" + application + "'";
+            clientORN.QueryCSV(clientInfoHeader, aPIAccessRequest, queryString, 1, "|", false, false, out CSVTableSet queryCSV, out byte[] FileData);
+            foreach (CSVTable table in queryCSV.CSVTables)
+            {
+                String[] rowData = table.Rows;
+                foreach (String data in rowData)
+                {
+                    password = String.IsNullOrEmpty(data) ? "" : data;
+                }
+            }
+            return password;
+        }
+
+
         private double GetPrices(string airport, string itemn)
         {
             double price = 0;
@@ -855,7 +878,7 @@ namespace PayablesAddProduct
                 var client = new RestClient("https://iccs.bigmachines.com/");
                 string User = Encoding.UTF8.GetString(Convert.FromBase64String("aW1wbGVtZW50YWRvcg=="));
                 string Pass = Encoding.UTF8.GetString(Convert.FromBase64String("U2luZXJneTIwMTgu"));
-                client.Authenticator = new HttpBasicAuthenticator("servicios", "Sinergy*2018");
+                client.Authenticator = new HttpBasicAuthenticator("servicios", CPQPass);
                 string definicion = "?totalResults=true&q={str_item_number:'" + itemn + "',str_icao_iata_code: '" + airport + "'}";
                 globalContext.LogMessage(definicion);
                 var request = new RestRequest("rest/v6/customPrecios/" + definicion, Method.GET);

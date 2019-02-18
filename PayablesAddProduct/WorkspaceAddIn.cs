@@ -102,6 +102,12 @@ namespace PayablesAddProduct
                     }
 
                     IncidentID = GetIncidentId(services);
+
+                    if (OUM == "1" || OUM == "118")
+                    {
+                        Quantity = "";
+                    }
+
                     if (OUM == "2")
                     {
                         string ICAOId = getICAODesi(IncidentID);
